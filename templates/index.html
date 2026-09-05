@@ -19,8 +19,6 @@
             --success-bg: #e3fcef;
             --error: #bf2600;
             --error-bg: #ffebe6;
-            --upload-border: #c0c4cc;
-            --upload-hover: #a8b8d1;
         }
 
         body {
@@ -93,96 +91,6 @@
 
         .field textarea { min-height: 160px; resize: vertical; }
         .field .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-        .checkbox-row label { font-size: 13px; font-weight: 500; margin: 0; cursor: pointer; }
-
-        /* 上传区域 */
-        .upload-zone {
-            border: 2px dashed var(--upload-border);
-            border-radius: 10px;
-            padding: 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
-            position: relative;
-        }
-
-        .upload-zone:hover,
-        .upload-zone.drag-over {
-            border-color: var(--primary);
-            background: #f0f4ff;
-        }
-
-        .upload-zone input[type="file"] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-        }
-
-        .upload-icon { font-size: 28px; margin-bottom: 8px; }
-        .upload-text { font-size: 13px; color: var(--text-muted); }
-        .upload-hint  { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-
-        /* 图片预览 */
-        .preview-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 12px;
-            padding: 10px 12px;
-            background: #f6f7f9;
-            border-radius: 8px;
-        }
-
-        .preview-row img {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-
-        .preview-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .preview-name {
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .preview-path {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .preview-remove {
-            background: none;
-            border: none;
-            font-size: 18px;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 4px;
-            line-height: 1;
-        }
-
-        .preview-remove:hover { color: var(--error); }
 
         .btn {
             width: 100%;
@@ -263,16 +171,11 @@
             <div class="hint" id="hintType">支持 Markdown 格式</div>
         </div>
 
-        <!-- 图片上传区域 -->
-        <div class="field" id="imageUploadField" style="display:none;">
-            <label>上传图片</label>
-            <div class="upload-zone" id="uploadZone">
-                <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp">
-                <div class="upload-icon">🖼️</div>
-                <div class="upload-text">点击选择或拖拽图片到此处</div>
-                <div class="upload-hint">支持 PNG / JPG / GIF / WebP，最大 10MB</div>
-            </div>
-            <div id="previewArea"></div>
+        <!-- 图片输入区域 -->
+        <div class="field" id="imageUrlField" style="display:none;">
+            <label for="imageUrl">图片链接</label>
+            <input type="url" id="imageUrl" placeholder="https://example.com/image.png">
+            <div class="hint">填写图片的公开访问地址，支持 PNG / JPG / GIF / WebP</div>
         </div>
 
         <!-- 图片标题 -->
@@ -300,23 +203,19 @@
 </div>
 
 <script>
-    const typeSelect        = document.getElementById('type');
-    const contentField      = document.getElementById('contentField');
-    const imageUploadField  = document.getElementById('imageUploadField');
-    const imageTitleField   = document.getElementById('imageTitleField');
-    const mentionField      = document.getElementById('mentionField');
-    const hintEl            = document.getElementById('hintType');
-    const alertBox          = document.getElementById('alertBox');
-    const sendBtn           = document.getElementById('sendBtn');
-    const spinner           = document.getElementById('spinner');
-    const btnText           = document.getElementById('btnText');
-    const contentEl         = document.getElementById('content');
-    const fileInput         = document.getElementById('fileInput');
-    const uploadZone        = document.getElementById('uploadZone');
-    const previewArea       = document.getElementById('previewArea');
-    const imageTitleEl      = document.getElementById('imageTitle');
-
-    let uploadedPath = null;
+    const typeSelect     = document.getElementById('type');
+    const contentField   = document.getElementById('contentField');
+    const imageUrlField  = document.getElementById('imageUrlField');
+    const imageTitleField= document.getElementById('imageTitleField');
+    const mentionField   = document.getElementById('mentionField');
+    const hintEl         = document.getElementById('hintType');
+    const alertBox       = document.getElementById('alertBox');
+    const sendBtn        = document.getElementById('sendBtn');
+    const spinner        = document.getElementById('spinner');
+    const btnText        = document.getElementById('btnText');
+    const contentEl      = document.getElementById('content');
+    const imageUrlEl     = document.getElementById('imageUrl');
+    const imageTitleEl   = document.getElementById('imageTitle');
 
     function toggleType() {
         const val = typeSelect.value;
@@ -324,78 +223,13 @@
         const isImage = val === 'image';
         mentionField.style.display  = isText  ? 'block' : 'none';
         contentField.style.display  = isImage ? 'none'  : 'block';
-        imageUploadField.style.display = isImage ? 'block' : 'none';
+        imageUrlField.style.display = isImage ? 'block' : 'none';
         imageTitleField.style.display = isImage ? 'block' : 'none';
         hintEl.textContent = isText ? '仅支持纯文本格式'
-                 : isImage ? '上传本地图片，自动转为消息'
-                           : '支持 Markdown 格式（可插入 ![](url)）';
+                 : isImage ? '填写图片公开访问地址，支持 PNG/JPG/GIF/WebP'
+                           : '支持 Markdown 格式';
         contentEl.required = !isImage;
-    }
-
-    // ── 文件上传 ──────────────────────────────────────────────────────
-
-    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-
-    // 拖拽支持
-    uploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadZone.classList.add('drag-over');
-    });
-    uploadZone.addEventListener('dragleave', () => {
-        uploadZone.classList.remove('drag-over');
-    });
-    uploadZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-    });
-
-    async function handleFile(file) {
-        if (!file) return;
-        const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp'];
-        if (!validTypes.includes(file.type)) {
-            showAlert('不支持的文件类型，请选择图片', 'error');
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            showAlert('图片大小不能超过 10MB', 'error');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const resp = await fetch('/upload', { method: 'POST', body: formData });
-            const data = await resp.json();
-            if (data.ok) {
-                uploadedPath = data.path;
-                showPreview(file.name, data.path);
-            } else {
-                showAlert('上传失败：' + (data.error || '未知错误'), 'error');
-            }
-        } catch (err) {
-            showAlert('上传请求失败：' + err.message, 'error');
-        }
-    }
-
-    function showPreview(name, path) {
-        previewArea.innerHTML = `
-            <div class="preview-row">
-                <img src="${path}" alt="preview">
-                <div class="preview-info">
-                    <div class="preview-name">${name}</div>
-                    <div class="preview-path">${path}</div>
-                </div>
-                <button type="button" class="preview-remove" onclick="removePreview()">✕</button>
-            </div>`;
-    }
-
-    function removePreview() {
-        uploadedPath = null;
-        previewArea.innerHTML = '';
-        fileInput.value = '';
+        imageUrlEl.required = isImage;
     }
 
     // ── 发送 ──────────────────────────────────────────────────────────
@@ -408,7 +242,7 @@
             content:     contentEl.value.trim(),
             mention_all: document.getElementById('mention_all').checked,
             title:       imageTitleEl.value.trim(),
-            url:         uploadedPath || ''
+            url:         imageUrlEl.value.trim()
         };
         sendBtn.disabled = true;
         spinner.style.display = 'block';
@@ -423,7 +257,7 @@
             const data = await resp.json();
             if (data.ok) {
                 showAlert(`✅ 成功发送到 ${data.sent}/${data.total} 个群组！`, 'success');
-                if (typeSelect.value === 'image') removePreview();
+                if (typeSelect.value === 'image') imageUrlEl.value = '';
             } else {
                 let msg = '发送失败';
                 if (data.sent > 0) msg += `（部分成功 ${data.sent}/${data.total}）`;
