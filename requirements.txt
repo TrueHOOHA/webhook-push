@@ -1,3 +1,2 @@
-# CLI 命令行工具依赖（message_push.py 使用）
-# server.py 已改用标准库 urllib，无需额外依赖
-requests==2.33.0
+# 本项目全部使用 Python 标准库实现，零外部依赖。
+# 保留此文件仅为占位，方便用户确认无 pip install 步骤。

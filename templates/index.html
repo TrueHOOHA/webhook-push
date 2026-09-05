@@ -516,7 +516,9 @@
 
     fileInput.addEventListener('change', () => {
         const newFiles = Array.from(fileInput.files);
-        if (newFiles.length === 0) { selectedFiles = []; previewArea.innerHTML = ''; return; }
+        selectedFiles = [];
+        previewArea.innerHTML = '';
+        if (newFiles.length === 0) return;
         for (const file of newFiles) {
             const valid = ['image/png','image/jpeg','image/gif','image/webp','image/bmp'];
             if (!valid.includes(file.type)) { showAlert('不支持的文件类型：' + file.name, 'error'); continue; }
@@ -632,7 +634,11 @@
     function showAlert(msg, type) {
         alertBox.textContent = msg;
         alertBox.className = 'alert alert-' + type + ' show';
-        if (type === 'success') contentEl.value = '';
+        if (type === 'success') {
+            contentEl.value = '';
+            imageTitleEl.value = '';
+            document.getElementById('mention_all').checked = false;
+        }
     }
 
     async function checkServer() {

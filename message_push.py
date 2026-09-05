@@ -18,6 +18,9 @@ webhook_url.txt 支持多行：
 from __future__ import annotations
 
 import argparse
+import base64 as b64mod
+import hashlib
+import json
 from pathlib import Path
 import sys
 from typing import Any
@@ -50,7 +53,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--type",
-        choices=("markdown", "text"),
+        choices=("markdown", "markdown_v2", "text", "image"),
         default="markdown",
         help="消息类型，默认 markdown。",
     )
@@ -72,6 +75,11 @@ def parse_args() -> argparse.Namespace:
         "--mention-all",
         action="store_true",
         help="仅 text 消息生效：自动 @所有人。",
+    )
+    parser.add_argument(
+        "--image",
+        dest="image_path",
+        help="image 类型时使用的本地图片路径。",
     )
     parser.add_argument(
         "--timeout",
@@ -163,7 +171,7 @@ def load_content(
     return file_content, content_file
 
 
-def build_message(message_type: str, content: str | None, mention_all: bool) -> dict[str, Any]:
+def build_message(message_type: str, content: str | None, mention_all: bool, image_path: str | None) -> dict[str, Any]:
     if message_type == "text":
         text_content = content or "这是一条默认文本通知。"
         payload: dict[str, Any] = {
@@ -176,13 +184,29 @@ def build_message(message_type: str, content: str | None, mention_all: bool) -> 
             payload["text"]["mentioned_list"] = ["@all"]
         return payload
 
-    markdown_content = content or DEFAULT_MARKDOWN_CONTENT
-    return {
-        "msgtype": "markdown",
-        "markdown": {
-            "content": markdown_content,
-        },
-    }
+    if message_type in ("markdown", "markdown_v2"):
+        markdown_content = content or DEFAULT_MARKDOWN_CONTENT
+        return {
+            "msgtype": message_type,
+            message_type: {
+                "content": markdown_content,
+            },
+        }
+
+    if message_type == "image":
+        if not image_path:
+            raise ValueError("image 类型必须通过 --image 指定图片路径")
+        raw = Path(image_path).read_bytes()
+        encoded = b64mod.b64encode(raw).decode("ascii")
+        return {
+            "msgtype": "image",
+            "image": {
+                "base64": encoded,
+                "md5": hashlib.md5(raw).hexdigest(),
+            },
+        }
+
+    raise ValueError(f"不支持的消息类型: {message_type}")
 
 
 def send_to_wechat(message: dict[str, Any], webhook_url: str, timeout: float) -> tuple[int, str]:
@@ -204,11 +228,10 @@ def main() -> int:
             args.interactive,
             args.type,
         )
+        message = build_message(args.type, content, args.mention_all, args.image_path)
     except (FileNotFoundError, OSError, ValueError) as exc:
         print(f"读取配置失败: {exc}", file=sys.stderr)
         return 1
-
-    message = build_message(args.type, content, args.mention_all)
 
     if args.dry_run:
         print("Dry run payload:")
@@ -225,6 +248,15 @@ def main() -> int:
             status_code, response_text = send_to_wechat(message, webhook_url, args.timeout)
         except (HTTPError, URLError) as exc:
             print(f"[{index}/{len(webhook_urls)}] 发送失败: {exc}", file=sys.stderr)
+            continue
+
+        try:
+            response_json = json.loads(response_text)
+            errcode = response_json.get("errcode", 0)
+        except ValueError:
+            errcode = 0  # 无法解析时保守视为成功，由人工检查
+        if errcode != 0:
+            print(f"[{index}/{len(webhook_urls)}] 发送失败: errcode={errcode}, {response_json.get('errmsg', response_text)}", file=sys.stderr)
             continue
 
         success_count += 1

@@ -4,6 +4,8 @@
 用法: python server.py
 浏览器访问 http://localhost:5000
 """
+import base64 as b64mod
+import hashlib
 import json
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -18,6 +20,12 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(Path(__file__).parent), **kwargs)
 
     def do_GET(self):
+        if self.path != "/":
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"Not Found")
+            return
         self.path = "/templates/index.html"
         super().do_GET()
 
@@ -48,8 +56,6 @@ class Handler(SimpleHTTPRequestHandler):
         msg_type = data.get("type", "markdown")
         content = data.get("content", "").strip()
         mention_all = data.get("mention_all", False)
-        title = data.get("title", "").strip()
-        url = data.get("url", "").strip()
         base64s = data.get("base64s", []) or data.get("base64", "")
 
         if msg_type == "image":
@@ -93,14 +99,17 @@ class Handler(SimpleHTTPRequestHandler):
                             method="POST",
                         )
                         with request.urlopen(req, timeout=15) as resp:
-                            success_count += 1
-                            results.append({"ok": True})
+                            body = resp.read().decode("utf-8", errors="replace")
+                            result = self._parse_wechat_response(body)
+                            if result["ok"]:
+                                success_count += 1
+                            results.append(result)
                     except HTTPError as e:
                         results.append({"ok": False, "error": f"HTTP {e.code}"})
                     except URLError as e:
                         results.append({"ok": False, "error": str(e.reason)})
             else:
-                payload = self._build_payload(msg_type, content, mention_all, title=title, url=url)
+                payload = self._build_payload(msg_type, content, mention_all)
                 try:
                     req = request.Request(
                         webhook_url,
@@ -109,8 +118,11 @@ class Handler(SimpleHTTPRequestHandler):
                         method="POST",
                     )
                     with request.urlopen(req, timeout=10) as resp:
-                        success_count += 1
-                        results.append({"ok": True})
+                        body = resp.read().decode("utf-8", errors="replace")
+                        result = self._parse_wechat_response(body)
+                        if result["ok"]:
+                            success_count += 1
+                        results.append(result)
                 except HTTPError as e:
                     results.append({"ok": False, "error": f"HTTP {e.code}"})
                 except URLError as e:
@@ -125,8 +137,6 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": False, "sent": 0, "total": total_expected, "errors": results}, 500)
 
     def _build_image_payload(self, base64_data):
-        import base64 as b64mod
-        import hashlib
         raw = b64mod.b64decode(base64_data)
         md5 = hashlib.md5(raw).hexdigest()
         return {
@@ -134,17 +144,24 @@ class Handler(SimpleHTTPRequestHandler):
             "image": {"base64": base64_data, "md5": md5},
         }
 
-    def _build_payload(self, msg_type, content, mention_all, title="", url="", base64=""):
+    def _build_payload(self, msg_type, content, mention_all):
         if msg_type == "text":
             if mention_all:
                 content = "@所有人 " + content
             return {"msgtype": "text", "text": {"content": content}}
-        if msg_type == "image":
-            raw = b64mod.b64decode(base64)
-            md5 = hashlib.md5(raw).hexdigest()
-            return {"msgtype": "image", "image": {"base64": base64, "md5": md5}}
-        if msg_type in ("markdown", "markdown_v2"):
-            return {"msgtype": msg_type, msg_type: {"content": content}}
+        # markdown 与 markdown_v2 顶层字段名恰好和 msg_type 字符串一致
+        return {"msgtype": msg_type, msg_type: {"content": content}}
+
+    def _parse_wechat_response(self, body):
+        """企业微信 Webhook 在 HTTP 200 下也会返回 errcode != 0（如频率限制、参数错误），
+        必须检查响应体里的 errcode 才能判定是否真正发送成功。"""
+        try:
+            data = json.loads(body)
+        except (ValueError, TypeError):
+            return {"ok": False, "error": f"无效响应: {body[:200]}"}
+        if data.get("errcode", 0) == 0:
+            return {"ok": True}
+        return {"ok": False, "error": data.get("errmsg", "unknown error"), "errcode": data.get("errcode")}
 
     def _json(self, data, status=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
