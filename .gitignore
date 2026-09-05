@@ -9,3 +9,4 @@ build/
 uploads/
 .git/hooks/pre-commit
 .pre-commit
+webhook_url.txt
