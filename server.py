@@ -98,10 +98,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _build_payload(self, msg_type, content, mention_all):
         if msg_type == "text":
-            p = {"msgtype": "text", "text": {"content": content}}
             if mention_all:
-                p["text"]["mentioned_list"] = ["@all"]
-            return p
+                content = "@所有人 " + content
+            return {"msgtype": "text", "text": {"content": content}}
         return {"msgtype": "markdown", "markdown": {"content": content}}
 
     def _json(self, data, status=200):
