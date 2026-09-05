@@ -92,6 +92,61 @@
         .field textarea { min-height: 160px; resize: vertical; }
         .field .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
+        .preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .preview-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #f6f7f9;
+            border-radius: 8px;
+            max-width: 200px;
+        }
+
+        .preview-item img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .preview-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .preview-item-name {
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preview-item-size {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .preview-item-remove {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px;
+            line-height: 1;
+        }
+
+        .preview-item-remove:hover { color: var(--error); }
+
         .btn {
             width: 100%;
             padding: 12px;
@@ -174,9 +229,9 @@
         <!-- 图片上传区域 -->
         <div class="field" id="imageUploadField" style="display:none;">
             <label>选择图片</label>
-            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp"
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" multiple
                    style="padding:8px;border:1.5px solid var(--border);border-radius:10px;width:100%;background:#fafbfc;font-size:14px;">
-            <div class="hint">本地图片将直接发送到群，支持 PNG/JPG/GIF/WebP，最大 10MB</div>
+            <div class="hint">可同时选择多张图片，每张最大 10MB，支持 PNG/JPG/GIF/WebP</div>
             <div id="previewArea"></div>
         </div>
 
@@ -220,7 +275,7 @@
     const previewArea       = document.getElementById('previewArea');
     const imageTitleEl      = document.getElementById('imageTitle');
 
-    let selectedFile = null;
+    let selectedFiles = [];
 
     function toggleType() {
         const val = typeSelect.value;
@@ -231,34 +286,65 @@
         imageUploadField.style.display = isImage ? 'block' : 'none';
         imageTitleField.style.display = isImage ? 'block' : 'none';
         hintEl.textContent = isText ? '仅支持纯文本格式'
-                 : isImage ? '本地图片将直接发送到群'
+                 : isImage ? '可同时选择多张图片发送'
                            : '支持 Markdown 格式';
         contentEl.required = !isImage;
     }
 
     fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (!file) { selectedFile = null; previewArea.innerHTML = ''; return; }
-        const valid = ['image/png','image/jpeg','image/gif','image/webp','image/bmp'];
-        if (!valid.includes(file.type)) { showAlert('不支持的文件类型', 'error'); fileInput.value = ''; return; }
-        if (file.size > 10 * 1024 * 1024) { showAlert('图片不能超过 10MB', 'error'); fileInput.value = ''; return; }
-        selectedFile = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            previewArea.innerHTML = `<div class="preview-row">
-                <img src="${e.target.result}" alt="preview">
-                <div class="preview-info">
-                    <div class="preview-name">${file.name}</div>
-                    <div class="preview-path">${(file.size/1024).toFixed(1)} KB</div>
-                </div>
-                <button type="button" class="preview-remove" onclick="clearFile()">✕</button>
-            </div>`;
-        };
-        reader.readAsDataURL(file);
+        const newFiles = Array.from(fileInput.files);
+        if (newFiles.length === 0) { selectedFiles = []; previewArea.innerHTML = ''; return; }
+        for (const file of newFiles) {
+            const valid = ['image/png','image/jpeg','image/gif','image/webp','image/bmp'];
+            if (!valid.includes(file.type)) { showAlert('不支持的文件类型：' + file.name, 'error'); continue; }
+            if (file.size > 10 * 1024 * 1024) { showAlert('图片不能超过 10MB：' + file.name, 'error'); continue; }
+            selectedFiles.push(file);
+        }
+        renderPreviews();
     });
 
-    window.clearFile = function() {
-        selectedFile = null;
+    function renderPreviews() {
+        if (selectedFiles.length === 0) { previewArea.innerHTML = ''; return; }
+        let html = '<div class="preview-grid">';
+        selectedFiles.forEach((file, i) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                html = previewArea.innerHTML;
+                const items = previewArea.querySelectorAll('.preview-item');
+                if (items[i]) {
+                    items[i].querySelector('img').src = e.target.result;
+                }
+            };
+            reader.readAsDataURL(file);
+            html += `<div class="preview-item" data-index="${i}">
+                <img src="" alt="preview">
+                <div class="preview-item-info">
+                    <div class="preview-item-name">${file.name}</div>
+                    <div class="preview-item-size">${(file.size/1024).toFixed(1)} KB</div>
+                </div>
+                <button type="button" class="preview-item-remove" onclick="removeFile(${i})">✕</button>
+            </div>`;
+        });
+        html += '</div>';
+        previewArea.innerHTML = html;
+        // Re-trigger image loads
+        selectedFiles.forEach((file, i) => {
+            const img = previewArea.querySelector(`.preview-item[data-index="${i}"] img`);
+            if (img) {
+                const r = new FileReader();
+                r.onload = (e) => { img.src = e.target.result; };
+                r.readAsDataURL(file);
+            }
+        });
+    }
+
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        renderPreviews();
+    };
+
+    window.clearAllFiles = function() {
+        selectedFiles = [];
         previewArea.innerHTML = '';
         fileInput.value = '';
     };
@@ -274,10 +360,9 @@
             title:       imageTitleEl.value.trim(),
         };
 
-        if (isImage && selectedFile) {
+        if (isImage && selectedFiles.length > 0) {
             try {
-                const base64 = await readFileAsBase64(selectedFile);
-                payload.base64 = base64;
+                payload.base64s = await Promise.all(selectedFiles.map(readFileAsBase64));
             } catch (err) {
                 showAlert('❌ 读取图片失败：' + err.message, 'error');
                 return;
@@ -302,8 +387,11 @@
             clearTimeout(timeout);
             const data = await resp.json();
             if (data.ok) {
-                showAlert(`✅ 成功发送到 ${data.sent}/${data.total} 个群组！`, 'success');
-                if (isImage) clearFile();
+                const imgLabel = selectedFiles.length > 1
+                    ? `${selectedFiles.length} 张图片`
+                    : '1 张图片';
+                showAlert(`✅ 成功发送 ${imgLabel} 到 ${data.sent}/${data.total} 个群组！`, 'success');
+                if (isImage) clearAllFiles();
             } else {
                 let msg = '发送失败';
                 if (data.sent > 0) msg += `（部分成功 ${data.sent}/${data.total}）`;

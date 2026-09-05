@@ -50,10 +50,11 @@ class Handler(SimpleHTTPRequestHandler):
         mention_all = data.get("mention_all", False)
         title = data.get("title", "").strip()
         url = data.get("url", "").strip()
-        base64_img = data.get("base64", "").strip()
+        base64s = data.get("base64s", []) or data.get("base64", "")
 
         if msg_type == "image":
-            if not base64_img:
+            images = base64s if isinstance(base64s, list) else ([base64s] if base64s else [])
+            if not images:
                 self._json({"ok": False, "error": "图片类型需要提供图片数据"}, 400)
                 return
         elif not content:
@@ -77,31 +78,61 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": False, "error": "No webhook URLs configured"}, 500)
             return
 
-        payload = self._build_payload(msg_type, content, mention_all, title=title, url=url, base64=base64_img)
-        results, success = [], 0
+        results = []
+        total_images = len(images) if msg_type == "image" else 1
+        success_count = 0
 
-        for i, url in enumerate(urls, 1):
-            try:
-                req = request.Request(
-                    url,
-                    data=json.dumps(payload).encode("utf-8"),
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
-                with request.urlopen(req, timeout=10) as resp:
-                    success += 1
-                    results.append({"index": i, "ok": True})
-            except HTTPError as e:
-                results.append({"index": i, "ok": False, "error": f"HTTP {e.code}"})
-            except URLError as e:
-                results.append({"index": i, "ok": False, "error": str(e.reason)})
+        for webhook_url in urls:
+            if msg_type == "image":
+                for img_data in images:
+                    try:
+                        req = request.Request(
+                            webhook_url,
+                            data=json.dumps(self._build_image_payload(img_data)).encode("utf-8"),
+                            headers={"Content-Type": "application/json"},
+                            method="POST",
+                        )
+                        with request.urlopen(req, timeout=15) as resp:
+                            success_count += 1
+                            results.append({"ok": True})
+                    except HTTPError as e:
+                        results.append({"ok": False, "error": f"HTTP {e.code}"})
+                    except URLError as e:
+                        results.append({"ok": False, "error": str(e.reason)})
+            else:
+                payload = self._build_payload(msg_type, content, mention_all, title=title, url=url)
+                try:
+                    req = request.Request(
+                        webhook_url,
+                        data=json.dumps(payload).encode("utf-8"),
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    with request.urlopen(req, timeout=10) as resp:
+                        success_count += 1
+                        results.append({"ok": True})
+                except HTTPError as e:
+                    results.append({"ok": False, "error": f"HTTP {e.code}"})
+                except URLError as e:
+                    results.append({"ok": False, "error": str(e.reason)})
 
-        if success == len(urls):
-            self._json({"ok": True, "sent": success, "total": len(urls)})
-        elif success > 0:
-            self._json({"ok": False, "sent": success, "total": len(urls), "errors": results}, 207)
+        total_expected = len(urls) * total_images
+        if success_count == total_expected:
+            self._json({"ok": True, "sent": success_count, "total": total_expected})
+        elif success_count > 0:
+            self._json({"ok": False, "sent": success_count, "total": total_expected, "errors": results}, 207)
         else:
-            self._json({"ok": False, "sent": 0, "total": len(urls), "errors": results}, 500)
+            self._json({"ok": False, "sent": 0, "total": total_expected, "errors": results}, 500)
+
+    def _build_image_payload(self, base64_data):
+        import base64 as b64mod
+        import hashlib
+        raw = b64mod.b64decode(base64_data)
+        md5 = hashlib.md5(raw).hexdigest()
+        return {
+            "msgtype": "image",
+            "image": {"base64": base64_data, "md5": md5},
+        }
 
     def _build_payload(self, msg_type, content, mention_all, title="", url="", base64=""):
         if msg_type == "text":
@@ -109,17 +140,9 @@ class Handler(SimpleHTTPRequestHandler):
                 content = "@所有人 " + content
             return {"msgtype": "text", "text": {"content": content}}
         if msg_type == "image":
-            import base64 as b64mod
-            import hashlib
             raw = b64mod.b64decode(base64)
             md5 = hashlib.md5(raw).hexdigest()
-            return {
-                "msgtype": "image",
-                "image": {
-                    "base64": base64,
-                    "md5": md5,
-                },
-            }
+            return {"msgtype": "image", "image": {"base64": base64, "md5": md5}}
         return {"msgtype": "markdown", "markdown": {"content": content}}
 
     def _json(self, data, status=200):
