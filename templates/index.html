@@ -63,7 +63,6 @@
             font-size: 14px;
             line-height: 1.5;
         }
-
         .alert-success { background: var(--success-bg); color: var(--success-text); }
         .alert-error { background: var(--error-bg); color: var(--error-text); }
         .alert-warning { background: var(--warning-bg); color: var(--warning-text); }
@@ -158,15 +157,9 @@
     <h1>发送企业微信通知</h1>
     <p class="subtitle">通过 Webhook 向群组推送消息</p>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <div id="alertBox"></div>
 
-    <form method="POST" action="/">
+    <form id="pushForm">
         <div class="form-group">
             <label for="type">消息类型 (Message Type)</label>
             <select name="type" id="type" onchange="toggleMentionAll()">
@@ -189,8 +182,9 @@
             <div class="hint">注：仅当消息类型为“纯文本”时生效。</div>
         </div>
 
-        <button type="submit">发送消息 (Send Message)</button>
+        <button type="submit" id="sendBtn">发送消息 (Send Message)</button>
     </form>
+    <div id="result"></div>
 
     <div class="footer">
         Powered by message_push &bull; <a href="https://github.com" target="_blank" style="color: var(--primary-color); text-decoration: none;">View Docs</a>
@@ -201,15 +195,51 @@
     function toggleMentionAll() {
         const typeSelect = document.getElementById('type');
         const mentionGroup = document.getElementById('mentionAllGroup');
-        
-        if (typeSelect.value === 'text') {
-            mentionGroup.style.display = 'block';
-        } else {
-            mentionGroup.style.display = 'none';
-        }
+        mentionGroup.style.display = typeSelect.value === 'text' ? 'block' : 'none';
     }
-    
-    // 初始化调用一次
+
+    document.getElementById('pushForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('sendBtn');
+        const resultDiv = document.getElementById('result');
+        const alertBox = document.getElementById('alertBox');
+
+        const payload = {
+            type: document.getElementById('type').value,
+            content: document.getElementById('content').value,
+            mention_all: document.getElementById('mention_all').checked
+        };
+
+        btn.disabled = true;
+        btn.textContent = '发送中...';
+        resultDiv.innerHTML = '';
+        alertBox.innerHTML = '';
+
+        try {
+            const resp = await fetch('/send', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+
+            if (data.ok) {
+                alertBox.innerHTML = '<div class="alert alert-success">成功发送到 ' + data.sent + '/' + data.total + ' 个群组！</div>';
+                document.getElementById('content').value = '';
+            } else {
+                let msg = '发送失败。';
+                if (data.sent > 0) msg += '部分成功 (' + data.sent + '/' + data.total + ')。';
+                if (data.error) msg += data.error;
+                alertBox.innerHTML = '<div class="alert alert-error">' + msg + '</div>';
+            }
+        } catch (err) {
+            alertBox.innerHTML = '<div class="alert alert-error">请求失败: ' + err.message + '</div>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '发送消息 (Send Message)';
+        }
+    });
+
     toggleMentionAll();
 </script>
 
