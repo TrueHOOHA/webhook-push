@@ -5,10 +5,10 @@ WeChat Webhook Message Sender
 通过企业微信群机器人发送文本或 Markdown 消息。
 
 推荐使用方式（Windows）：
-    venv\\Scripts\\python message_push.py --content "这是一条测试通知"
-    venv\\Scripts\\python message_push.py --type markdown --content "# 标题\n\n自定义内容"
-    venv\\Scripts\\python message_push.py --type text --content "文本通知" --dry-run
-    venv\\Scripts\\python message_push.py --interactive
+    python message_push.py --content "这是一条测试通知"
+    python message_push.py --type markdown --content "# 标题\n\n自定义内容"
+    python message_push.py --type text --content "文本通知" --dry-run
+    python message_push.py --interactive
 
 webhook_url.txt 支持多行：
     每行一个 webhook URL
@@ -21,8 +21,8 @@ import argparse
 from pathlib import Path
 import sys
 from typing import Any
-
-import requests
+from urllib import request
+from urllib.error import HTTPError, URLError
 
 WEBHOOK_FILE_PATH = Path(__file__).with_name("webhook_url.txt")
 DEFAULT_MARKDOWN_CONTENT = (
@@ -185,11 +185,12 @@ def build_message(message_type: str, content: str | None, mention_all: bool) -> 
     }
 
 
-def send_to_wechat(message: dict[str, Any], webhook_url: str, timeout: float) -> requests.Response:
+def send_to_wechat(message: dict[str, Any], webhook_url: str, timeout: float) -> tuple[int, str]:
     headers = {"Content-Type": "application/json"}
-    response = requests.post(webhook_url, json=message, headers=headers, timeout=timeout)
-    response.raise_for_status()
-    return response
+    data = json.dumps(message).encode("utf-8")
+    req = request.Request(webhook_url, data=data, headers=headers, method="POST")
+    with request.urlopen(req, timeout=timeout) as response:
+        return response.status, response.read().decode("utf-8")
 
 
 def main() -> int:
@@ -221,15 +222,15 @@ def main() -> int:
     success_count = 0
     for index, webhook_url in enumerate(webhook_urls, start=1):
         try:
-            response = send_to_wechat(message, webhook_url, args.timeout)
-        except requests.RequestException as exc:
+            status_code, response_text = send_to_wechat(message, webhook_url, args.timeout)
+        except (HTTPError, URLError) as exc:
             print(f"[{index}/{len(webhook_urls)}] 发送失败: {exc}", file=sys.stderr)
             continue
 
         success_count += 1
         print(f"[{index}/{len(webhook_urls)}] Message sent successfully!")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+        print(f"Status Code: {status_code}")
+        print(f"Response: {response_text}")
 
     if success_count == len(webhook_urls):
         return 0
