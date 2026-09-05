@@ -143,7 +143,8 @@ class Handler(SimpleHTTPRequestHandler):
             raw = b64mod.b64decode(base64)
             md5 = hashlib.md5(raw).hexdigest()
             return {"msgtype": "image", "image": {"base64": base64, "md5": md5}}
-        return {"msgtype": "markdown", "markdown": {"content": content}}
+        if msg_type in ("markdown", "markdown_v2"):
+            return {"msgtype": msg_type, msg_type: {"content": content}}
 
     def _json(self, data, status=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
