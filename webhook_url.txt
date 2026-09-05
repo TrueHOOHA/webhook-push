@@ -1,3 +1,1 @@
-https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=请替换成你的真实key1
-https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=请替换成你的真实key2
-
+https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=597dc14b-3640-40c1-90fd-d57bfcd87f43

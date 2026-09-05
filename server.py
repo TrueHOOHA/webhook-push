@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-轻量级消息推送服务器（零依赖，Python 标准库即可运行）
+企业微信消息推送服务器（完全零依赖，Python 标准库即可运行）
 用法: python server.py
 浏览器访问 http://localhost:5000
 """
-from http.server import HTTPServer, SimpleHTTPRequestHandler
 import json
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-import requests
+from urllib import request
+from urllib.error import HTTPError, URLError
 
 WEBHOOK_FILE = Path(__file__).parent / "webhook_url.txt"
 
@@ -17,7 +18,6 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(Path(__file__).parent), **kwargs)
 
     def do_GET(self):
-        # 所有 GET 请求都返回 index.html
         self.path = "/templates/index.html"
         super().do_GET()
 
@@ -28,7 +28,8 @@ class Handler(SimpleHTTPRequestHandler):
 
         try:
             length = int(self.headers.get("Content-Length", 0))
-            data = json.loads(self.rfile.read(length)) if length else {}
+            raw = self.rfile.read(length) if length else b"{}"
+            data = json.loads(raw)
         except Exception:
             self._json({"ok": False, "error": "Invalid JSON"}, 400)
             return
@@ -63,12 +64,19 @@ class Handler(SimpleHTTPRequestHandler):
 
         for i, url in enumerate(urls, 1):
             try:
-                r = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
-                r.raise_for_status()
-                success += 1
-                results.append({"index": i, "ok": True})
-            except Exception as e:
-                results.append({"index": i, "ok": False, "error": str(e)})
+                req = request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with request.urlopen(req, timeout=10) as resp:
+                    success += 1
+                    results.append({"index": i, "ok": True})
+            except HTTPError as e:
+                results.append({"index": i, "ok": False, "error": f"HTTP {e.code}"})
+            except URLError as e:
+                results.append({"index": i, "ok": False, "error": str(e.reason)})
 
         if success == len(urls):
             self._json({"ok": True, "sent": success, "total": len(urls)})
