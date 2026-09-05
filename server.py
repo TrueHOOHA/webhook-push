@@ -51,7 +51,11 @@ class Handler(SimpleHTTPRequestHandler):
         title = data.get("title", "").strip()
         url = data.get("url", "").strip()
 
-        if not content:
+        if msg_type == "image":
+            if not url:
+                self._json({"ok": False, "error": "图片类型需要提供图片链接"}, 400)
+                return
+        elif not content:
             self._json({"ok": False, "error": "Content cannot be empty"}, 400)
             return
 
