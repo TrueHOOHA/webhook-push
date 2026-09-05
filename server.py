@@ -86,7 +86,7 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": False, "error": "Invalid multipart request"}, 400)
             return
 
-        filename = headers.get_filename()
+        filename = headers.get("filename")
         if not filename:
             self._json({"ok": False, "error": "No filename in upload"}, 400)
             return
@@ -98,7 +98,7 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": False, "error": "不支持的文件类型，仅支持图片"}, 400)
             return
 
-        content_type_hdr = headers.get("Content-Type", "")
+        content_type_hdr = headers.get("content-type", "")
         if content_type_hdr not in ALLOWED_TYPES:
             self._json({"ok": False, "error": f"不支持的图片格式: {content_type_hdr}"}, 400)
             return
