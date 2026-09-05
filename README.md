@@ -1,12 +1,8 @@
-<div align="center">
-
 # 企业微信群消息推送
 
 基于 Webhook 的轻量企业微信通知工具，零依赖，一键启动。
 
-`Python` · `HTML` · `零依赖`
-
----
+> `Python` · `HTML` · `零依赖`
 
 ## ✨ 特性
 
