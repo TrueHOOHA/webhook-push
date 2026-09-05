@@ -21,9 +21,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.path = "/templates/index.html"
         super().do_GET()
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def do_POST(self):
         if self.path != "/send":
-            self.send_error(404)
+            self.send_response(404)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"Not Found")
             return
 
         try:
@@ -97,6 +108,7 @@ class Handler(SimpleHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", len(body))
         self.end_headers()
         self.wfile.write(body)
