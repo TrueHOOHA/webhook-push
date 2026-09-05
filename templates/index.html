@@ -173,13 +173,10 @@
 
         <!-- 图片上传区域 -->
         <div class="field" id="imageUploadField" style="display:none;">
-            <label>上传图片</label>
-            <div class="upload-zone" id="uploadZone">
-                <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp">
-                <div class="upload-icon">🖼️</div>
-                <div class="upload-text">点击选择或拖拽图片到此处</div>
-                <div class="upload-hint">支持 PNG / JPG / GIF / WebP，最大 10MB，上传后自动推送到群</div>
-            </div>
+            <label>选择图片</label>
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp"
+                   style="padding:8px;border:1.5px solid var(--border);border-radius:10px;width:100%;background:#fafbfc;font-size:14px;">
+            <div class="hint">本地图片将直接发送到群，支持 PNG/JPG/GIF/WebP，最大 10MB</div>
             <div id="previewArea"></div>
         </div>
 
@@ -220,12 +217,10 @@
     const btnText           = document.getElementById('btnText');
     const contentEl         = document.getElementById('content');
     const fileInput         = document.getElementById('fileInput');
-    const uploadZone        = document.getElementById('uploadZone');
     const previewArea       = document.getElementById('previewArea');
     const imageTitleEl      = document.getElementById('imageTitle');
 
-    let mediaId = null;
-    let uploadFileName = '';
+    let selectedFile = null;
 
     function toggleType() {
         const val = typeSelect.value;
@@ -236,64 +231,37 @@
         imageUploadField.style.display = isImage ? 'block' : 'none';
         imageTitleField.style.display = isImage ? 'block' : 'none';
         hintEl.textContent = isText ? '仅支持纯文本格式'
-                 : isImage ? '上传图片自动推送到群'
+                 : isImage ? '本地图片将直接发送到群'
                            : '支持 Markdown 格式';
         contentEl.required = !isImage;
     }
 
-    // ── 文件上传 ──────────────────────────────────────────────────────
-
-    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-
-    uploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadZone.classList.add('drag-over');
-    });
-    uploadZone.addEventListener('dragleave', () => {
-        uploadZone.classList.remove('drag-over');
-    });
-    uploadZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-    });
-
-    async function handleFile(file) {
-        if (!file) return;
-        const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp'];
-        if (!validTypes.includes(file.type)) {
-            showAlert('不支持的文件类型，请选择图片', 'error');
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            showAlert('图片大小不能超过 10MB', 'error');
-            return;
-        }
-        uploadFileName = file.name;
-        // Show local preview immediately
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) { selectedFile = null; previewArea.innerHTML = ''; return; }
+        const valid = ['image/png','image/jpeg','image/gif','image/webp','image/bmp'];
+        if (!valid.includes(file.type)) { showAlert('不支持的文件类型', 'error'); fileInput.value = ''; return; }
+        if (file.size > 10 * 1024 * 1024) { showAlert('图片不能超过 10MB', 'error'); fileInput.value = ''; return; }
+        selectedFile = file;
         const reader = new FileReader();
         reader.onload = (e) => {
-            previewArea.innerHTML = `
-                <div class="preview-row">
-                    <img src="${e.target.result}" alt="preview">
-                    <div class="preview-info">
-                        <div class="preview-name">${file.name}</div>
-                        <div class="preview-path">已选择，发送时自动上传</div>
-                    </div>
-                    <button type="button" class="preview-remove" onclick="removePreview()">✕</button>
-                </div>`;
+            previewArea.innerHTML = `<div class="preview-row">
+                <img src="${e.target.result}" alt="preview">
+                <div class="preview-info">
+                    <div class="preview-name">${file.name}</div>
+                    <div class="preview-path">${(file.size/1024).toFixed(1)} KB</div>
+                </div>
+                <button type="button" class="preview-remove" onclick="clearFile()">✕</button>
+            </div>`;
         };
         reader.readAsDataURL(file);
-        mediaId = null; // reset, will be set after upload
-    }
+    });
 
-    function removePreview() {
-        mediaId = null;
-        uploadFileName = '';
+    window.clearFile = function() {
+        selectedFile = null;
         previewArea.innerHTML = '';
         fileInput.value = '';
-    }
+    };
 
     document.getElementById('pushForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -303,35 +271,16 @@
             content:     contentEl.value.trim(),
             mention_all: document.getElementById('mention_all').checked,
             title:       imageTitleEl.value.trim(),
-            media_id:    mediaId || ''
         };
+
+        if (typeSelect.value === 'image' && selectedFile) {
+            const base64 = await readFileAsBase64(selectedFile);
+            payload.base64 = base64;
+        }
+
         sendBtn.disabled = true;
         spinner.style.display = 'block';
         btnText.textContent = '发送中...';
-
-        // If image type and file selected but not yet uploaded, upload first
-        if (typeSelect.value === 'image' && !mediaId && fileInput.files.length > 0) {
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            try {
-                const uploadResp = await fetch('/upload', { method: 'POST', body: formData });
-                const uploadData = await uploadResp.json();
-                if (!uploadData.ok) {
-                    showAlert('❌ 图片上传失败：' + (uploadData.error || '未知错误'), 'error');
-                    sendBtn.disabled = false;
-                    spinner.style.display = 'none';
-                    btnText.textContent = '发送消息';
-                    return;
-                }
-                payload.media_id = uploadData.media_id;
-            } catch (err) {
-                showAlert('❌ 图片上传请求失败：' + err.message, 'error');
-                sendBtn.disabled = false;
-                spinner.style.display = 'none';
-                btnText.textContent = '发送消息';
-                return;
-            }
-        }
 
         try {
             const resp  = await fetch('/send', {
@@ -342,7 +291,7 @@
             const data = await resp.json();
             if (data.ok) {
                 showAlert(`✅ 成功发送到 ${data.sent}/${data.total} 个群组！`, 'success');
-                if (typeSelect.value === 'image') removePreview();
+                if (typeSelect.value === 'image') clearFile();
             } else {
                 let msg = '发送失败';
                 if (data.sent > 0) msg += `（部分成功 ${data.sent}/${data.total}）`;
@@ -357,6 +306,19 @@
             btnText.textContent = '发送消息';
         }
     });
+
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                // Remove data URL prefix (e.g. "data:image/png;base64,")
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
 
     function showAlert(msg, type) {
         alertBox.textContent = msg;
