@@ -266,6 +266,7 @@
     document.getElementById('pushForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         alertBox.className = 'alert';
+        const isImage = typeSelect.value === 'image';
         const payload = {
             type:        typeSelect.value,
             content:     contentEl.value.trim(),
@@ -273,25 +274,36 @@
             title:       imageTitleEl.value.trim(),
         };
 
-        if (typeSelect.value === 'image' && selectedFile) {
-            const base64 = await readFileAsBase64(selectedFile);
-            payload.base64 = base64;
+        if (isImage && selectedFile) {
+            try {
+                const base64 = await readFileAsBase64(selectedFile);
+                payload.base64 = base64;
+            } catch (err) {
+                showAlert('❌ 读取图片失败：' + err.message, 'error');
+                return;
+            }
         }
 
         sendBtn.disabled = true;
         spinner.style.display = 'block';
         btnText.textContent = '发送中...';
 
+        // Abort after 30 seconds
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+
         try {
-            const resp  = await fetch('/send', {
+            const resp = await fetch('/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
+            clearTimeout(timeout);
             const data = await resp.json();
             if (data.ok) {
                 showAlert(`✅ 成功发送到 ${data.sent}/${data.total} 个群组！`, 'success');
-                if (typeSelect.value === 'image') clearFile();
+                if (isImage) clearFile();
             } else {
                 let msg = '发送失败';
                 if (data.sent > 0) msg += `（部分成功 ${data.sent}/${data.total}）`;
@@ -299,7 +311,11 @@
                 showAlert('❌ ' + msg, 'error');
             }
         } catch (err) {
-            showAlert('❌ 请求失败：' + err.message, 'error');
+            clearTimeout(timeout);
+            const reason = err.name === 'AbortError'
+                ? '请求超时（30秒），图片可能太大，请尝试压缩后重试'
+                : err.message;
+            showAlert('❌ 请求失败：' + reason, 'error');
         } finally {
             sendBtn.disabled = false;
             spinner.style.display = 'none';
