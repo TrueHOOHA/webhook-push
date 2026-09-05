@@ -3,244 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>企业微信消息推送 / WeChat Webhook Sender</title>
+    <title>企业微信消息推送</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         :root {
-            --primary-color: #0052d9;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --primary: #0052d9;
             --primary-hover: #0043aa;
-            --bg-color: #f4f5f7;
-            --panel-bg: #ffffff;
-            --text-main: #172b4d;
-            --text-muted: #5e6c84;
-            --border-color: #dfe1e6;
+            --text: #172b4d;
+            --text-muted: #6b778c;
+            --border: #dfe1e6;
+            --success: #066637;
             --success-bg: #e3fcef;
-            --success-text: #066637;
+            --error: #bf2600;
             --error-bg: #ffebe6;
-            --error-text: #bf2600;
-            --warning-bg: #fffae6;
-            --warning-text: #ff8b00;
-            --radius: 8px;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 640px;
-            background: var(--panel-bg);
-            border-radius: var(--radius);
-            box-shadow: 0 4px 12px rgba(9, 30, 66, 0.05);
-            padding: 32px;
-            box-sizing: border-box;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-top: 0;
-            margin-bottom: 8px;
-            color: var(--text-main);
-        }
-
-        p.subtitle {
-            color: var(--text-muted);
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            margin-bottom: 24px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .alert-success { background: var(--success-bg); color: var(--success-text); }
-        .alert-error { background: var(--error-bg); color: var(--error-text); }
-        .alert-warning { background: var(--warning-bg); color: var(--warning-text); }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        select, textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: inherit;
-            background-color: #fafbfc;
-            box-sizing: border-box;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-
-        select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background-color: #fff;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 160px;
-        }
-
-        .checkbox-group {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
             display: flex;
             align-items: center;
-            margin-top: 12px;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .checkbox-group input {
-            margin-right: 8px;
-            width: 16px;
-            height: 16px;
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 40px;
+            width: 100%;
+            max-width: 560px;
         }
 
-        .checkbox-group label {
-            margin-bottom: 0;
-            font-weight: normal;
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
         }
 
-        .hint {
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .field { margin-bottom: 20px; }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #fafbfc;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .field select:focus,
+        .field textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        .field textarea { min-height: 160px; resize: vertical; }
+
+        .field .hint {
             font-size: 12px;
             color: var(--text-muted);
             margin-top: 4px;
         }
 
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: background-color 0.2s;
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
         }
 
-        button:hover {
-            background-color: var(--primary-hover);
+        .checkbox-row input[type="checkbox"] {
+            width: 16px; height: 16px; cursor: pointer;
         }
+
+        .checkbox-row label {
+            font-size: 13px;
+            font-weight: 500;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover { background: var(--primary-hover); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show { display: block; }
+        .alert-success { background: var(--success-bg); color: var(--success); }
+        .alert-error   { background: var(--error-bg);   color: var(--error); }
 
         .footer {
             margin-top: 24px;
             text-align: center;
             font-size: 12px;
             color: var(--text-muted);
-            border-top: 1px solid var(--border-color);
-            padding-top: 16px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>发送企业微信通知</h1>
-    <p class="subtitle">通过 Webhook 向群组推送消息</p>
+<div class="card">
+    <div class="header">
+        <h1>📤 发送企业微信通知</h1>
+        <p>通过 Webhook 向群组推送消息</p>
+    </div>
 
-    <div id="alertBox"></div>
+    <div id="alertBox" class="alert"></div>
 
     <form id="pushForm">
-        <div class="form-group">
-            <label for="type">消息类型 (Message Type)</label>
-            <select name="type" id="type" onchange="toggleMentionAll()">
+        <div class="field">
+            <label for="type">消息类型</label>
+            <select id="type" onchange="toggleMention()">
                 <option value="markdown">Markdown</option>
-                <option value="text">纯文本 (Text)</option>
+                <option value="text">纯文本</option>
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="content">消息内容 (Content)</label>
-            <textarea name="content" id="content" placeholder="在此输入你要发送的消息内容..." required></textarea>
-            <div class="hint">支持文本或 Markdown 格式（根据上方选择）。</div>
+        <div class="field">
+            <label for="content">消息内容</label>
+            <textarea id="content" placeholder="在此输入消息内容..." required></textarea>
+            <div class="hint" id="hintMarkdown">支持 Markdown 格式</div>
         </div>
 
-        <div class="form-group" id="mentionAllGroup" style="display: none;">
-            <div class="checkbox-group">
-                <input type="checkbox" name="mention_all" id="mention_all" value="1">
-                <label for="mention_all">@所有人 (@all)</label>
+        <div class="field" id="mentionField" style="display:none;">
+            <div class="checkbox-row">
+                <input type="checkbox" id="mention_all">
+                <label for="mention_all">@所有人</label>
             </div>
-            <div class="hint">注：仅当消息类型为“纯文本”时生效。</div>
+            <div class="hint">仅当消息类型为"纯文本"时生效</div>
         </div>
 
-        <button type="submit" id="sendBtn">发送消息 (Send Message)</button>
+        <button type="submit" class="btn" id="sendBtn">
+            <span class="spinner" id="spinner"></span>
+            <span id="btnText">发送消息</span>
+        </button>
     </form>
-    <div id="result"></div>
 
-    <div class="footer">
-        Powered by message_push &bull; <a href="https://github.com" target="_blank" style="color: var(--primary-color); text-decoration: none;">View Docs</a>
-    </div>
+    <div class="footer">webhook-push &bull; 本地运行，安全可靠</div>
 </div>
 
 <script>
-    function toggleMentionAll() {
-        const typeSelect = document.getElementById('type');
-        const mentionGroup = document.getElementById('mentionAllGroup');
-        mentionGroup.style.display = typeSelect.value === 'text' ? 'block' : 'none';
+    const typeSelect   = document.getElementById('type');
+    const mentionField = document.getElementById('mentionField');
+    const hintEl       = document.getElementById('hintMarkdown');
+    const alertBox     = document.getElementById('alertBox');
+    const sendBtn      = document.getElementById('sendBtn');
+    const spinner      = document.getElementById('spinner');
+    const btnText      = document.getElementById('btnText');
+    const contentEl    = document.getElementById('content');
+
+    function toggleMention() {
+        const isText = typeSelect.value === 'text';
+        mentionField.style.display = isText ? 'block' : 'none';
+        hintEl.textContent = isText ? '仅支持纯文本格式' : '支持 Markdown 格式';
     }
 
-    document.getElementById('pushForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = document.getElementById('sendBtn');
-        const resultDiv = document.getElementById('result');
-        const alertBox = document.getElementById('alertBox');
+    function showAlert(msg, type) {
+        alertBox.textContent = msg;
+        alertBox.className = 'alert alert-' + type + ' show';
+        if (type === 'success') {
+            contentEl.value = '';
+        }
+    }
 
+    document.getElementById('pushForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.className = 'alert';
         const payload = {
-            type: document.getElementById('type').value,
-            content: document.getElementById('content').value,
+            type:        typeSelect.value,
+            content:     contentEl.value.trim(),
             mention_all: document.getElementById('mention_all').checked
         };
-
-        btn.disabled = true;
-        btn.textContent = '发送中...';
-        resultDiv.innerHTML = '';
-        alertBox.innerHTML = '';
+        sendBtn.disabled = true;
+        spinner.style.display = 'block';
+        btnText.textContent = '发送中...';
 
         try {
-            const resp = await fetch('/send', {
+            const resp  = await fetch('/send', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
-
             if (data.ok) {
-                alertBox.innerHTML = '<div class="alert alert-success">成功发送到 ' + data.sent + '/' + data.total + ' 个群组！</div>';
-                document.getElementById('content').value = '';
+                showAlert(`✅ 成功发送到 ${data.sent}/${data.total} 个群组！`, 'success');
             } else {
-                let msg = '发送失败。';
-                if (data.sent > 0) msg += '部分成功 (' + data.sent + '/' + data.total + ')。';
-                if (data.error) msg += data.error;
-                alertBox.innerHTML = '<div class="alert alert-error">' + msg + '</div>';
+                let msg = '发送失败';
+                if (data.sent > 0) msg += `（部分成功 ${data.sent}/${data.total}）`;
+                if (data.error)    msg += '：' + data.error;
+                showAlert('❌ ' + msg, 'error');
             }
         } catch (err) {
-            alertBox.innerHTML = '<div class="alert alert-error">请求失败: ' + err.message + '</div>';
+            showAlert('❌ 请求失败：' + err.message, 'error');
         } finally {
-            btn.disabled = false;
-            btn.textContent = '发送消息 (Send Message)';
+            sendBtn.disabled = false;
+            spinner.style.display = 'none';
+            btnText.textContent = '发送消息';
         }
     });
 
-    toggleMentionAll();
+    toggleMention();
 </script>
 
 </body>
