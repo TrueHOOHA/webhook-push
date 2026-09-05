@@ -48,6 +48,8 @@ class Handler(SimpleHTTPRequestHandler):
         msg_type = data.get("type", "markdown")
         content = data.get("content", "").strip()
         mention_all = data.get("mention_all", False)
+        title = data.get("title", "").strip()
+        url = data.get("url", "").strip()
 
         if not content:
             self._json({"ok": False, "error": "Content cannot be empty"}, 400)
@@ -70,7 +72,7 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"ok": False, "error": "No webhook URLs configured"}, 500)
             return
 
-        payload = self._build_payload(msg_type, content, mention_all)
+        payload = self._build_payload(msg_type, content, mention_all, title=title, url=url)
         results, success = [], 0
 
         for i, url in enumerate(urls, 1):
@@ -96,11 +98,15 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self._json({"ok": False, "sent": 0, "total": len(urls), "errors": results}, 500)
 
-    def _build_payload(self, msg_type, content, mention_all):
+    def _build_payload(self, msg_type, content, mention_all, title="", url=""):
         if msg_type == "text":
             if mention_all:
                 content = "@所有人 " + content
             return {"msgtype": "text", "text": {"content": content}}
+        if msg_type == "image":
+            if url:
+                content = f"{title}\n![]({url})" if title else f"![]({url})"
+            return {"msgtype": "markdown", "markdown": {"content": content}}
         return {"msgtype": "markdown", "markdown": {"content": content}}
 
     def _json(self, data, status=200):

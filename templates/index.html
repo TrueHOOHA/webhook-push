@@ -177,16 +177,28 @@
     <form id="pushForm">
         <div class="field">
             <label for="type">消息类型</label>
-            <select id="type" onchange="toggleMention()">
+            <select id="type" onchange="toggleType()">
                 <option value="markdown">Markdown</option>
                 <option value="text">纯文本</option>
+                <option value="image">图片</option>
             </select>
         </div>
 
-        <div class="field">
+        <div class="field" id="contentField">
             <label for="content">消息内容</label>
             <textarea id="content" placeholder="在此输入消息内容..." required></textarea>
             <div class="hint" id="hintMarkdown">支持 Markdown 格式</div>
+        </div>
+
+        <div class="field" id="imageUrlField" style="display:none;">
+            <label for="imageUrl">图片链接</label>
+            <input type="url" id="imageUrl" placeholder="https://example.com/image.png">
+            <div class="hint">填写图片的公开访问地址</div>
+        </div>
+
+        <div class="field" id="imageTitleField" style="display:none;">
+            <label for="imageTitle">图片标题（可选）</label>
+            <input type="text" id="imageTitle" placeholder="选填，会显示在图片上方">
         </div>
 
         <div class="field" id="mentionField" style="display:none;">
@@ -207,19 +219,33 @@
 </div>
 
 <script>
-    const typeSelect   = document.getElementById('type');
-    const mentionField = document.getElementById('mentionField');
-    const hintEl       = document.getElementById('hintMarkdown');
-    const alertBox     = document.getElementById('alertBox');
-    const sendBtn      = document.getElementById('sendBtn');
-    const spinner      = document.getElementById('spinner');
-    const btnText      = document.getElementById('btnText');
-    const contentEl    = document.getElementById('content');
+    const typeSelect     = document.getElementById('type');
+    const mentionField   = document.getElementById('mentionField');
+    const contentField   = document.getElementById('contentField');
+    const imageUrlField  = document.getElementById('imageUrlField');
+    const imageTitleField= document.getElementById('imageTitleField');
+    const hintEl         = document.getElementById('hintMarkdown');
+    const alertBox       = document.getElementById('alertBox');
+    const sendBtn        = document.getElementById('sendBtn');
+    const spinner        = document.getElementById('spinner');
+    const btnText        = document.getElementById('btnText');
+    const contentEl      = document.getElementById('content');
+    const imageUrlEl     = document.getElementById('imageUrl');
+    const imageTitleEl   = document.getElementById('imageTitle');
 
-    function toggleMention() {
-        const isText = typeSelect.value === 'text';
-        mentionField.style.display = isText ? 'block' : 'none';
-        hintEl.textContent = isText ? '仅支持纯文本格式' : '支持 Markdown 格式';
+    function toggleType() {
+        const val = typeSelect.value;
+        const isText  = val === 'text';
+        const isImage = val === 'image';
+        mentionField.style.display  = isText  ? 'block' : 'none';
+        contentField.style.display  = isImage ? 'none'  : 'block';
+        imageUrlField.style.display = isImage ? 'block' : 'none';
+        imageTitleField.style.display = isImage ? 'block' : 'none';
+        hintEl.textContent = isText ? '仅支持纯文本格式'
+                 : isImage ? '填写图片公开访问地址，支持 PNG/JPG/GIF/WebP'
+                           : '支持 Markdown 格式';
+        contentEl.required = !isImage;
+        imageUrlEl.required = isImage;
     }
 
     function showAlert(msg, type) {
@@ -236,7 +262,9 @@
         const payload = {
             type:        typeSelect.value,
             content:     contentEl.value.trim(),
-            mention_all: document.getElementById('mention_all').checked
+            mention_all: document.getElementById('mention_all').checked,
+            title:       imageTitleEl.value.trim(),
+            url:         imageUrlEl.value.trim()
         };
         sendBtn.disabled = true;
         spinner.style.display = 'block';
