@@ -106,7 +106,7 @@ class Handler(SimpleHTTPRequestHandler):
             raise Exception("webhook_url.txt 未配置")
 
         key = self._extract_key(urls[0])
-        upload_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key={key}&type={ext}"
+        upload_url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/upload_media?key={key}&type={ext.lstrip('.')}"
 
         boundary = "----UploadBoundary"
         body = (
