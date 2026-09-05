@@ -8,22 +8,23 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #f5f5f7;
-            --card: #ffffff;
-            --border: #e8e8ed;
-            --text: #1d1d1f;
+            --bg: #0a0a0b;
+            --surface: rgba(255,255,255,0.04);
+            --surface-hover: rgba(255,255,255,0.07);
+            --border: rgba(255,255,255,0.08);
+            --border-focus: rgba(255,255,255,0.2);
+            --text: #f5f5f7;
             --text-secondary: #86868b;
-            --accent: #0071e3;
-            --accent-hover: #0077ed;
-            --success: #34c759;
-            --success-bg: #eafaf1;
-            --error: #ff3b30;
-            --error-bg: #fef2f2;
-            --radius: 12px;
+            --accent: #2997ff;
+            --accent-glow: rgba(41,151,255,0.15);
+            --success: #30d158;
+            --success-bg: rgba(48,209,88,0.1);
+            --error: #ff453a;
+            --error-bg: rgba(255,69,58,0.1);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
@@ -34,76 +35,99 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(41,151,255,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(88,86,214,0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
         .container {
             width: 100%;
-            max-width: 520px;
+            max-width: 480px;
+            position: relative;
+            z-index: 1;
         }
 
-        /* ── Header ─────────────────────────────────────── */
-        .header {
-            margin-bottom: 32px;
+        /* ── Logo ───────────────────────────────────────── */
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
         }
 
-        .header-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--accent);
-            border-radius: 14px;
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #2997ff 0%, #5e5ce6 100%);
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(41,151,255,0.25);
         }
 
-        .header-icon svg { width: 24px; height: 24px; fill: #fff; }
+        .logo-icon svg { width: 28px; height: 28px; fill: #fff; }
 
-        .header h1 {
-            font-size: 24px;
+        .logo h1 {
+            font-size: 22px;
             font-weight: 700;
             letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #f5f5f7 30%, #86868b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .header p {
-            font-size: 14px;
+        .logo p {
+            font-size: 13px;
             color: var(--text-secondary);
             margin-top: 4px;
         }
 
         /* ── Card ───────────────────────────────────────── */
         .card {
-            background: var(--card);
-            border-radius: 20px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-            padding: 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 28px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
         /* ── Alert ──────────────────────────────────────── */
         .alert {
             padding: 12px 16px;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 13px;
             line-height: 1.5;
             margin-bottom: 24px;
             display: none;
-            animation: fadeIn 0.2s ease;
+            animation: slideIn 0.25s ease;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         .alert.show { display: block; }
-        .alert-success { background: var(--success-bg); color: #1a8a3f; }
-        .alert-error   { background: var(--error-bg);   color: #c0392b; }
+        .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(48,209,88,0.15); }
+        .alert-error   { background: var(--error-bg);   color: var(--error);   border: 1px solid rgba(255,69,58,0.15); }
 
-        /* ── Form ───────────────────────────────────────── */
+        /* ── Fields ─────────────────────────────────────── */
         .field { margin-bottom: 20px; }
 
         .field label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
             margin-bottom: 8px;
         }
 
@@ -111,12 +135,12 @@
         .field input[type="text"],
         .field textarea {
             width: 100%;
-            padding: 12px 16px;
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius);
-            font-size: 15px;
+            padding: 13px 16px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            font-size: 14px;
             font-family: inherit;
-            background: #fafafa;
+            background: rgba(255,255,255,0.03);
             color: var(--text);
             transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
             appearance: none;
@@ -126,19 +150,23 @@
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2386868b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 14px center;
-            padding-right: 36px;
+            padding-right: 38px;
         }
 
         .field select:focus,
         .field input:focus,
         .field textarea:focus {
             outline: none;
-            border-color: var(--accent);
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
+            border-color: var(--border-focus);
+            background: rgba(255,255,255,0.06);
+            box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
-        .field textarea { min-height: 140px; resize: vertical; line-height: 1.6; }
+        .field textarea {
+            min-height: 130px;
+            resize: vertical;
+            line-height: 1.6;
+        }
 
         .hint {
             font-size: 12px;
@@ -147,16 +175,29 @@
         }
 
         /* ── File input ─────────────────────────────────── */
-        .file-input-wrapper {
-            position: relative;
-        }
-
         .file-input-wrapper input[type="file"] {
-            padding: 10px 14px;
+            padding: 12px;
             cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
         }
 
-        /* ── Preview grid ───────────────────────────────── */
+        .file-input-wrapper input[type="file"]::file-selector-button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 12px;
+            transition: opacity 0.2s;
+        }
+
+        .file-input-wrapper input[type="file"]::file-selector-button:hover { opacity: 0.85; }
+
+        /* ── Preview ────────────────────────────────────── */
         .preview-grid {
             display: flex;
             flex-wrap: wrap;
@@ -168,20 +209,24 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 10px 6px 6px;
-            background: #f5f5f7;
-            border-radius: 10px;
-            max-width: 180px;
-            transition: background 0.15s;
+            padding: 8px 10px 8px 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 170px;
+            transition: background 0.15s, border-color 0.15s;
         }
 
-        .preview-item:hover { background: #ebebed; }
+        .preview-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: var(--border-focus);
+        }
 
         .preview-item img {
             width: 36px;
             height: 36px;
             object-fit: cover;
-            border-radius: 6px;
+            border-radius: 8px;
         }
 
         .preview-item-info { flex: 1; min-width: 0; }
@@ -192,37 +237,35 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: var(--text);
         }
 
-        .preview-item-size { font-size: 11px; color: var(--text-secondary); }
+        .preview-item-size { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
 
         .preview-item-remove {
             background: none;
             border: none;
-            font-size: 14px;
             color: var(--text-secondary);
             cursor: pointer;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
+            font-size: 15px;
+            line-height: 1;
             transition: background 0.15s, color 0.15s;
+            flex-shrink: 0;
         }
 
         .preview-item-remove:hover { background: var(--error-bg); color: var(--error); }
 
         /* ── Checkbox ───────────────────────────────────── */
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .checkbox-row { display: flex; align-items: center; gap: 10px; }
 
         .checkbox-row input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 18px; height: 18px;
             accent-color: var(--accent);
             cursor: pointer;
         }
@@ -239,29 +282,30 @@
         /* ── Button ─────────────────────────────────────── */
         .btn {
             width: 100%;
-            padding: 14px 24px;
+            padding: 15px 24px;
             background: var(--accent);
             color: #fff;
             border: none;
-            border-radius: var(--radius);
+            border-radius: 14px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s, opacity 0.2s;
+            transition: background 0.2s, transform 0.1s, opacity 0.2s, box-shadow 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            margin-top: 8px;
+            margin-top: 4px;
+            box-shadow: 0 4px 20px rgba(41,151,255,0.2);
         }
 
-        .btn:hover { background: var(--accent-hover); }
+        .btn:hover { background: #40a8ff; box-shadow: 0 6px 28px rgba(41,151,255,0.3); }
         .btn:active { transform: scale(0.98); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
         .spinner {
             width: 16px; height: 16px;
-            border: 2px solid rgba(255,255,255,0.4);
+            border: 2px solid rgba(255,255,255,0.3);
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
@@ -272,25 +316,22 @@
 
         /* ── Footer ─────────────────────────────────────── */
         .footer {
-            margin-top: 20px;
+            margin-top: 24px;
             text-align: center;
             font-size: 12px;
             color: var(--text-secondary);
         }
-
-        .footer a { color: var(--accent); text-decoration: none; }
-        .footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <div class="header-icon">
+    <div class="logo">
+        <div class="logo-icon">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </div>
         <h1>消息推送</h1>
-        <p>通过 Webhook 向企业微信群发送通知</p>
+        <p>企业微信群 Webhook 通知</p>
     </div>
 
     <div class="card">
@@ -298,7 +339,7 @@
 
         <form id="pushForm">
             <div class="field">
-                <label for="type">消息类型</label>
+                <label>类型</label>
                 <select id="type" onchange="toggleType()">
                     <option value="markdown">Markdown</option>
                     <option value="markdown_v2">Markdown V2</option>
@@ -308,23 +349,23 @@
             </div>
 
             <div class="field" id="contentField">
-                <label for="content">消息内容</label>
-                <textarea id="content" placeholder="在此输入消息内容..." required></textarea>
+                <label>内容</label>
+                <textarea id="content" placeholder="输入消息内容..." required></textarea>
                 <div class="hint" id="hintType">支持 Markdown 格式</div>
             </div>
 
             <div class="field" id="imageUploadField" style="display:none;">
-                <label>选择图片</label>
+                <label>图片</label>
                 <div class="file-input-wrapper">
                     <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" multiple>
                 </div>
-                <div class="hint">可同时选择多张图片，每张最大 10MB</div>
+                <div class="hint">可同时选多张，每张最大 10MB</div>
                 <div id="previewArea"></div>
             </div>
 
             <div class="field" id="imageTitleField" style="display:none;">
-                <label for="imageTitle">图片标题（可选）</label>
-                <input type="text" id="imageTitle" placeholder="选填，会显示在图片上方">
+                <label>标题（可选）</label>
+                <input type="text" id="imageTitle" placeholder="显示在图片上方">
             </div>
 
             <div class="field" id="mentionField" style="display:none;">
@@ -332,17 +373,17 @@
                     <input type="checkbox" id="mention_all">
                     <label for="mention_all">@所有人</label>
                 </div>
-                <div class="hint" style="margin-left:28px;">仅当消息类型为"纯文本"时生效</div>
+                <div class="hint" style="margin-left:28px;">仅纯文本生效</div>
             </div>
 
             <button type="submit" class="btn" id="sendBtn">
                 <span class="spinner" id="spinner"></span>
-                <span id="btnText">发送消息</span>
+                <span id="btnText">发送</span>
             </button>
         </form>
     </div>
 
-    <div class="footer">webhook-push &bull; 本地运行</div>
+    <div class="footer">webhook-push &middot; 本地运行</div>
 </div>
 
 <script>
@@ -371,8 +412,8 @@
         contentField.style.display  = isImage ? 'none'  : 'block';
         imageUploadField.style.display = isImage ? 'block' : 'none';
         imageTitleField.style.display = isImage ? 'block' : 'none';
-        hintEl.textContent = isText ? '仅支持纯文本格式'
-                 : isImage ? '可同时选择多张图片发送'
+        hintEl.textContent = isText ? '仅支持纯文本'
+                 : isImage ? '可同时选择多张图片'
                            : '支持 Markdown 格式';
         contentEl.required = !isImage;
     }
@@ -462,24 +503,24 @@
                 const label = isImage
                     ? `${selectedFiles.length} 张图片`
                     : '消息';
-                showAlert(`✅ 成功发送 ${label} 到 ${data.sent}/${data.total} 个群组`, 'success');
+                showAlert(`已发送到 ${data.sent}/${data.total} 个群组`, 'success');
                 if (isImage) clearAllFiles();
             } else {
                 let msg = '发送失败';
                 if (data.sent > 0) msg += `（部分成功 ${data.sent}/${data.total}）`;
                 if (data.error) msg += '：' + data.error;
-                showAlert('❌ ' + msg, 'error');
+                showAlert(msg, 'error');
             }
         } catch (err) {
             clearTimeout(timeout);
             const reason = err.name === 'AbortError'
-                ? '请求超时（30秒），图片可能太大，请尝试压缩后重试'
+                ? '请求超时（30秒），图片可能太大'
                 : err.message;
-            showAlert('❌ 请求失败：' + reason, 'error');
+            showAlert('请求失败：' + reason, 'error');
         } finally {
             sendBtn.disabled = false;
             spinner.style.display = 'none';
-            btnText.textContent = '发送消息';
+            btnText.textContent = '发送';
         }
     });
 
@@ -508,8 +549,7 @@
     (async () => {
         const ok = await checkServer();
         if (!ok) {
-            alertBox.innerHTML = '无法连接到服务器，请先运行 <code>python server.py</code> 后刷新页面。';
-            alertBox.className = 'alert alert-error show';
+            showAlert('请先运行 python server.py 后刷新页面', 'error');
         }
     })();
 
