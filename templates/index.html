@@ -342,6 +342,23 @@
         if (type === 'success') contentEl.value = '';
     }
 
+    // 启动时检查服务器是否在线
+    async function checkServer() {
+        try {
+            const resp = await fetch('/', { method: 'HEAD', cache: 'no-cache' });
+            if (resp.ok) return true;
+        } catch {}
+        return false;
+    }
+
+    (async () => {
+        const ok = await checkServer();
+        if (!ok) {
+            alertBox.innerHTML = '<div class="alert alert-error">❌ 无法连接到服务器，请先运行 <code>python server.py</code> 后刷新页面。</div>';
+            alertBox.className = 'alert show';
+        }
+    })();
+
     toggleType();
 </script>
 
