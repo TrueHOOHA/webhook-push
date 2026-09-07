@@ -56,6 +56,7 @@ class Handler(SimpleHTTPRequestHandler):
         msg_type = data.get("type", "markdown")
         content = data.get("content", "").strip()
         mention_all = data.get("mention_all", False)
+        title = data.get("title", "").strip()
         base64s = data.get("base64s", []) or data.get("base64", "")
 
         if msg_type == "image":
@@ -85,31 +86,17 @@ class Handler(SimpleHTTPRequestHandler):
             return
 
         results = []
-        total_images = len(images) if msg_type == "image" else 1
+        if msg_type == "image":
+            # 企业微信 image 消息不支持标题，标题作为一条 text 消息先发
+            payloads = ([self._build_payload("text", title, False)] if title else []) + [
+                self._build_image_payload(img) for img in images
+            ]
+        else:
+            payloads = [self._build_payload(msg_type, content, mention_all)]
         success_count = 0
 
         for webhook_url in urls:
-            if msg_type == "image":
-                for img_data in images:
-                    try:
-                        req = request.Request(
-                            webhook_url,
-                            data=json.dumps(self._build_image_payload(img_data)).encode("utf-8"),
-                            headers={"Content-Type": "application/json"},
-                            method="POST",
-                        )
-                        with request.urlopen(req, timeout=15) as resp:
-                            body = resp.read().decode("utf-8", errors="replace")
-                            result = self._parse_wechat_response(body)
-                            if result["ok"]:
-                                success_count += 1
-                            results.append(result)
-                    except HTTPError as e:
-                        results.append({"ok": False, "error": f"HTTP {e.code}"})
-                    except URLError as e:
-                        results.append({"ok": False, "error": str(e.reason)})
-            else:
-                payload = self._build_payload(msg_type, content, mention_all)
+            for payload in payloads:
                 try:
                     req = request.Request(
                         webhook_url,
@@ -117,7 +104,7 @@ class Handler(SimpleHTTPRequestHandler):
                         headers={"Content-Type": "application/json"},
                         method="POST",
                     )
-                    with request.urlopen(req, timeout=10) as resp:
+                    with request.urlopen(req, timeout=15) as resp:
                         body = resp.read().decode("utf-8", errors="replace")
                         result = self._parse_wechat_response(body)
                         if result["ok"]:
@@ -128,7 +115,7 @@ class Handler(SimpleHTTPRequestHandler):
                 except URLError as e:
                     results.append({"ok": False, "error": str(e.reason)})
 
-        total_expected = len(urls) * total_images
+        total_expected = len(urls) * len(payloads)
         if success_count == total_expected:
             self._json({"ok": True, "sent": success_count, "total": total_expected})
         elif success_count > 0:
